@@ -1,13 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const authenticateToken = require('../middleware/authMiddleware');
 const requireRole = require('../middleware/roleMiddleware');
 const { submitFeedback, getAllFeedback } = require('../controllers/feedbackController');
 
 // Submit feedback
-router.post('/', authenticateToken, requireRole('staff'), submitFeedback);
+router.post('/', requireRole('staff'), submitFeedback);
 
 // Get all feedback
-router.get('/', authenticateToken, requireRole('staff'), getAllFeedback);
+router.get('/', requireRole('staff'), getAllFeedback);
+//MONGO_URI=mongodb+srv://Cluster30932:87654321foreigth@cluster30932.zzxtnz0.mongodb.net/?retryWrites=true&w=majority&appName=Cluster30932
+
 
 module.exports = router;

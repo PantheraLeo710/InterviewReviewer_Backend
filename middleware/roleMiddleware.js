@@ -2,12 +2,12 @@ function requireRole(role) {
   return (req, res, next) => {
     console.log("Inside requireRole, user:", req.user);
 
-    if (!req.user || !req.user.isStaff) {
-      return res.status(403).json({ message: 'Forbidden - Not staff' });
+    if (!req.user) {
+      return res.status(401).json({ message: 'Unauthorized - No user' });
     }
 
-    if (role === 'staff' && req.user.isStaff !== true) {
-      return res.status(403).json({ message: 'Forbidden - Role mismatch' });
+    if (role === 'staff' && !req.user.isStaff) {
+      return res.status(403).json({ message: 'Forbidden - Staff only' });
     }
 
     next();

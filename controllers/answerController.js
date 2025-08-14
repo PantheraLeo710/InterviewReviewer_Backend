@@ -127,14 +127,15 @@ exports.getAllAnswers = async (req, res) => {
 };
 
 // Get my answer history
-exports.getMyAnswers = async (req, res) => {
+exports.getMyAnswers = async (req, res , next) => {
     try {
         const userId = req.user._id;
         const history = await Answer.find({ userId }).sort({ createdAt: -1 });
         res.json(history);
     } catch (err) {
         console.error('Error fetching history:', err);
-        res.status(500).json({ message: 'Server error' });
+        next(err)
+        
     }
 };
 
