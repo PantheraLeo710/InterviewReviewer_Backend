@@ -20,7 +20,7 @@ const app = express();
 // Middlewares
 app.use(express.json()); // Accept JSON data
 app.use(cors({
- origin :"*",
+ origin :"https://interviewreviewer-backend.onrender.com",
 credentials : true
     
 }
