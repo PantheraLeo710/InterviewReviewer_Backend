@@ -19,7 +19,12 @@ const app = express();
 
 // Middlewares
 app.use(express.json()); // Accept JSON data
-app.use(cors());         // Enable Cross-Origin
+app.use(cors({
+ origin :"interview-reviewer-frontend-bo95-iokdeogiv.vercel.app",
+credentials : true
+    
+}
+));         // Enable Cross-Origin
 app.use(helmet());       // Add security headers
 
 const authenticateToken = require('./middleware/authMiddleware');
