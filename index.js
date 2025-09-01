@@ -20,7 +20,7 @@ const app = express();
 // Middlewares
 app.use(express.json()); // Accept JSON data
 app.use(cors({
- origin :"interview-reviewer-frontend-bo95-iokdeogiv.vercel.app",
+ origin :"*",
 credentials : true
     
 }
