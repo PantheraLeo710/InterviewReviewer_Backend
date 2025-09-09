@@ -1,14 +1,12 @@
-// controllers/authController.js
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { JWT_SECRET } = require('../config');
 
-// ===== Signup Controller =====
 exports.signup = async (req, res) => {
     const { name, email, password } = req.body;
 
-    // Basic field validation
+
     if (!name || !email || !password) {
         return res.status(400).json({ message: 'All fields are required' });
     }

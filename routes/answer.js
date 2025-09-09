@@ -1,4 +1,3 @@
-// routes/answer.js
 const express = require('express');
 const {
     submitAnswers,
@@ -8,15 +7,15 @@ const {
     getAllSubmissions
 } = require('../controllers/answerController');
 
-
 const requireRole = require('../middleware/roleMiddleware');
+const authenticateToken = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-router.post('/', submitAnswers);
+router.post('/quiz', authenticateToken, submitAnswers);
 router.get('/', getAllAnswers);
 router.get('/mine', getMyAnswers);
-router.get('/submissions/mine', getMySubmissions);
+router.get('/submissions', authenticateToken ,getMySubmissions);
 router.get('/submissions/all', requireRole('staff'), getAllSubmissions);
 
 module.exports = router;

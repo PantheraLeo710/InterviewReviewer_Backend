@@ -1,64 +1,79 @@
 const Feedback = require('../models/Feedback');
 const User = require('../models/User');
 
-// @desc Submit feedback and handle applicant promotion/deletion
-// @route POST /api/feedback
-// @access Staff only
-const submitFeedback = async (req, res) => {
-    const { applicantId, interviewerName, feedbackText, result } = req.body;
-    console.log(req.body, "BODY");
+exports.submitFeedback = async (req, res) => {
+  
+        console.log(req.body, "BODY");
+    
+        const { applicantId, interviewerName, feedbackText, result } = req.body;
 
-    try {
-        const feedback = new Feedback({
+        if (!applicantId || !interviewerName || !feedbackText || !result) {
+            return res.status(400).json({
+                success: false,
+                message: "all fields are required"
+            });
+        }
+try {
+        const newFeedback = await Feedback.create({
             applicantId,
             interviewerName,
             feedbackText,
             result
         });
 
-        await feedback.save();
-
-        // Find the applicant
+        console.log("newFeedback",newFeedback);
+        
+        if (!newFeedback || newFeedback.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "not found"
+            })
+        }
         const applicant = await User.findById(applicantId);
         if (!applicant) {
             return res.status(404).json({ message: 'Applicant not found' });
         }
-
         if (result === 'pass') {
-            // Promote to staff
             applicant.isStaff = true;
             applicant.promotedAt = new Date();
             await applicant.save();
             console.log(`Applicant ${applicantId} passed — promoted to staff`);
 
         } else if (result === 'fail') {
-            // Delete the applicant
-            await User.findByIdAndDelete(applicantId);
+            applicant.isStaff = false;
+            await applicant.save();
             console.log(`Applicant ${applicantId} failed — deleted from applicants`);
         }
 
-        res.status(201).json({ message: 'Feedback submitted and action taken' });
+
+        res.status(201).json({
+            success: true,
+            message: "Feedback submitted successfully",
+            newFeedback
+        });
+
+
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: "Error submitting feedback", error: error.message });
     }
+
 };
 
-// @desc Get all feedback (staff only)
-// @route GET /api/feedback
-// @access Staff only
-const getAllFeedback = async (req, res) => {
+exports.getAllFeedback = async (req, res) => {
+    
     try {
-        const feedbacks = await Feedback.find().populate('applicantId');
-        res.json(feedbacks);
+        const feedbacks = await Feedback.find().populate('applicantId', 'name email');
+        if(!feedbacks || feedbacks.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "No feedback found"
+            });
+        }   
+
+        res.status(200).json(feedbacks);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: "Error fetching feedback", error: error.message });
     }
 };
 
-module.exports = {
-    submitFeedback,
-    getAllFeedback
-};

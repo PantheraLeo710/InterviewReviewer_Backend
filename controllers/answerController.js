@@ -1,14 +1,10 @@
-// controllers/answerController.js
 const Answer = require('../models/Answer');
 const Question = require('../models/Question');
 const User = require('../models/User');
 const Submission = require('../models/Submission');
-const jwt = require('jsonwebtoken');
-const { JWT_SECRET } = require('../config');
 
 const PASS_MARK_PERCENTAGE = 60;
 
-// Submit answers & evaluate
 exports.submitAnswers = async (req, res) => {
     const { answers } = req.body;
     if (!Array.isArray(answers) || answers.length === 0) {
@@ -16,6 +12,9 @@ exports.submitAnswers = async (req, res) => {
     }
 
     try {
+        const user = await User.findById(req.user._id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
         let score = 0;
         const answerDocs = [];
 
@@ -27,7 +26,7 @@ exports.submitAnswers = async (req, res) => {
             if (isCorrect) score++;
 
             answerDocs.push({
-                userId: req.user._id,
+                userId: user._id,
                 question: ans.questionId,
                 selectedOption: ans.selectedOption,
                 isCorrect
@@ -41,7 +40,7 @@ exports.submitAnswers = async (req, res) => {
         const status = percentage >= PASS_MARK_PERCENTAGE ? 'pass' : 'fail';
 
         await Submission.create({
-            userId: req.user._id,
+            userId: user._id,
             answers: answerDocs.map(ans => ({
                 question: ans.question,
                 selectedOption: ans.selectedOption,
@@ -53,69 +52,34 @@ exports.submitAnswers = async (req, res) => {
             status
         });
 
-        const applicant = await User.findById(req.user._id);
-        if (!applicant) return res.status(404).json({ message: 'User not found' });
+        // Update user record instead of deleting or promoting abruptly
+        user.hasAttempted = true;
+        user.score = score;
+        user.result = status;
+        user.eligibleForStaff = status === 'pass';
+        user.lastAttemptStatus = status;
+        await user.save();
 
-        if (status === 'pass') {
-            applicant.isStaff = true;
-            applicant.promotedAt = new Date();
-            await applicant.save();
+        const responsePayload = {
+            message: 'Submission evaluated',
+            score,
+            totalQuestions,
+            percentage,
+            status,
+            eligibleForStaff: user.eligibleForStaff
+        };
+
+        console.log("Backend response payload:", responsePayload);
+        res.status(200).json(responsePayload);
 
 
-            const newToken = jwt.sign(
-                {
-                    id: applicant._id,
-                    name: applicant.name,
-                    email: applicant.email,
-                    isStaff: true
-                },
-                JWT_SECRET,
-                { expiresIn: '10h' }
-            );
-
-            if (process.env.NODE_ENV !== 'production') {
-                console.log("Submitted answers:", answers);
-                console.log("Decoded User:", req.user);
-            }
-
-            return res.status(200).json({
-                message: 'Submission successful',
-                score,
-                totalQuestions,
-                percentage,
-                status,
-                token: newToken,
-                user: {
-                    id: applicant._id,
-                    name: applicant.name,
-                    email: applicant.email,
-                    is: true
-                }
-            });
-        } else {
-            await User.findByIdAndDelete(req.user._id);
-
-            if (process.env.NODE_ENV !== 'production') {
-                console.log("Submitted answers:", answers);
-                console.log("Decoded User:", req.user);
-            }
-
-            return res.status(200).json({
-                message: 'Submission evaluated',
-                score,
-                totalQuestions,
-                percentage,
-                status,
-                answers
-            });
-        }
     } catch (error) {
         console.error("Error saving answer:", error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
 
-// Get all answers (staff only)
+
 exports.getAllAnswers = async (req, res) => {
     try {
         const answers = await Answer.find().populate('userId', 'name email');
@@ -126,34 +90,45 @@ exports.getAllAnswers = async (req, res) => {
     }
 };
 
-// Get my answer history
-exports.getMyAnswers = async (req, res , next) => {
+exports.getMyAnswers = async (req, res, next) => {
     try {
         const userId = req.user._id;
         const history = await Answer.find({ userId }).sort({ createdAt: -1 });
         res.json(history);
     } catch (err) {
         console.error('Error fetching history:', err);
-        next(err)
-        
+        next(err);
     }
 };
 
-// Get my submissions
 exports.getMySubmissions = async (req, res) => {
+    const user = req.user
+    const Id = user._id
     try {
-        const submissions = await Submission.find({ userId: req.user._id })
-            .sort({ submittedAt: -1 })
-            .populate('answers.question', 'questionText');
-
-        res.json(submissions);
+        const submissions = await Submission.find({ userId: Id })
+        // const count = await Submission.countDocuments({ userId: Id });
+        const count = submissions.length;
+        const totalMarks = submissions.reduce((sum, submission) => {
+            return sum + (submission.score || 0);
+        }, 0);
+        const totalPossibleScore = submissions.reduce((sum, submission) => {
+            return sum + (submission.totalQuestions || 0);
+        }, 0);
+        const accuracy = totalPossibleScore > 0
+            ? Math.floor((totalMarks / totalPossibleScore) * 100)
+            : 0;
+        res.json({
+            success: true,
+            message: "Submissions fetched successfully",
+            count: count,
+            accuracy: accuracy,
+            submission: submissions
+        });
     } catch (err) {
-        console.error('Error fetching submissions:', err);
         res.status(500).json({ message: 'Server error' });
-    }
+    };
 };
 
-// Get all submissions (staff only)
 exports.getAllSubmissions = async (req, res) => {
     console.log("User Role Check:", {
         id: req.user._id,
@@ -166,6 +141,7 @@ exports.getAllSubmissions = async (req, res) => {
             .sort({ submittedAt: -1 })
             .populate('userId', 'name email')
             .populate('answers.question', 'questionText');
+
         res.json(submissions);
     } catch (e) {
         console.error(e);

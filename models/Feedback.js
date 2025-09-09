@@ -3,11 +3,15 @@ const mongoose = require('mongoose');
 const feedbackSchema = new mongoose.Schema({
     applicantId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+        ref: 'user',
         required: true
     },
-    interviewerName: String,
-    feedbackText: String,
+    interviewerName:{
+        type: String,
+    },
+    feedbackText:{
+        type: String,
+    } ,
     result: {
         type: String,
         enum: ['pass', 'fail'],
@@ -15,4 +19,5 @@ const feedbackSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Feedback', feedbackSchema);
+const Feedback = mongoose.model('Feedback', feedbackSchema);
+module.exports = Feedback

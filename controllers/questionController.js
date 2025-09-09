@@ -1,7 +1,5 @@
-// controllers/questionController.js
 const Question = require('../models/Question');
 
-// Add a new question (staff only)
 exports.addQuestion = async (req, res) => {
     const { questionText, options, correctAnswer } = req.body;
 
@@ -33,7 +31,6 @@ exports.addQuestion = async (req, res) => {
     }
 };
 
-// Get all questions (without correctAnswer)
 exports.getQuestions = async (req, res) => {
     try {
         console.log("Decoded JWT inside questions route:", req.user);
