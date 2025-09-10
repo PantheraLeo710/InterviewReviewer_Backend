@@ -106,6 +106,10 @@ exports.getMySubmissions = async (req, res) => {
     const Id = user._id
     try {
         const submissions = await Submission.find({ userId: Id })
+        .populate({
+            path: "answers.question",
+            select: "questionText options correctAnswer"
+        })
         // const count = await Submission.countDocuments({ userId: Id });
         const count = submissions.length;
         const totalMarks = submissions.reduce((sum, submission) => {
